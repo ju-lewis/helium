@@ -4,6 +4,12 @@
 //! ju-lewis 2025
 
 pub mod server;
+pub mod http;
 
+
+pub enum Method {
+    GET,
+    POST
+}
 
 
