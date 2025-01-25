@@ -65,6 +65,12 @@ impl Server {
         F: HeliumTask,
         T: ToString
     {
+
+        //TODO:
+        // Register route in a data structure (Hashmap with String keys and `Route` values)?
+        // When main thread with TCPlistener receives a connection, it looks up the route and adds
+        // the corresponding handler to the task queue
+
         todo!();
     }
 

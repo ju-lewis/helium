@@ -1,2 +1,5 @@
 
+pub trait Response {
+
+}
 
