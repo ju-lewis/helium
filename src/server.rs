@@ -1,12 +1,14 @@
 
 use std::{collections::VecDeque, sync::{Arc, Mutex}, thread};
-use crate::{http::Response, Method};
-
+use crate::{http::{Path, StatusCode}, Method};
 
 pub struct Server {
     busy_threads: u32,
     max_threads: u32,
-    thread_pool: Vec<thread::JoinHandle<()>>
+    thread_pool: Vec<thread::JoinHandle<()>>,
+
+    //task_queue,
+    //handlers: HashMap<Path, HeliumTask>
 }
 
 impl Server {
@@ -25,9 +27,10 @@ impl Server {
     }
 
 
-    fn create_thread_pool(thread_cap: u32, task_queue: Arc<Mutex<VecDeque<Box<dyn HeliumTask + Send>>>>) -> Vec<thread::JoinHandle<()>> {
+    fn create_thread_pool(thread_cap: u32, task_queue: Arc<Mutex<VecDeque<Box<dyn HeliumTask<> + Send>>>>) -> Vec<thread::JoinHandle<()>> {
     
         let mut thread_pool = Vec::new();
+
 
         for _ in 0..thread_cap {
     
@@ -48,11 +51,10 @@ impl Server {
                         Some(t) => t
                     };
 
-                    let task_result = task.execute();
+                    let task_result: TaskResponse = task.execute();
                     
-                    if task_result.is_err() {
-                        // Idk, log error or somethin
-                    }
+                    // Return response over TCP stream
+
                 }
             }));
         }
@@ -67,7 +69,7 @@ impl Server {
     {
 
         //TODO:
-        // Register route in a data structure (Hashmap with String keys and `Route` values)?
+        // Register route in a data structure (Hashmap with String keys and `HeliumTask` values)?
         // When main thread with TCPlistener receives a connection, it looks up the route and adds
         // the corresponding handler to the task queue
 
@@ -82,20 +84,36 @@ impl Server {
 }
 
 
-/// A HeliumTask represents the behaviour of tasks (handlers) for a Helium Server.
+/// A HeliumTask represents the behaviour of any task that can be handled by the threadpool.
+/// 
+/// A blanket implementation is provided for any basic 'route handler' that takes nothing and 
+/// returns a serialisable string.
 pub trait HeliumTask {
-    fn execute(&self) -> std::io::Result<()>;
+    fn execute(&self) -> TaskResponse;
 }
 
-// Blank implementation for infallible functions
-impl<S, T: Fn() -> S> HeliumTask for T {
-    fn execute(&self) -> std::io::Result<()> {
-        self();
+// Blanket implementation for *infallible* route handlers
+impl<S: ToString + 'static, T: Fn() -> S> HeliumTask for T {
+    fn execute(&self) -> TaskResponse {
+        let response_content = self();
 
-        Ok(())
+        TaskResponse {
+            status: StatusCode::Ok,
+            content: Some(Box::new(response_content))
+        }
     }
 }
 
+
+/// Internal representation of a HeliumTask's completion status
+/// 
+/// This can be used to represent the execution of a route handler (providing a 
+/// statuscode and content) or a generic task run in the task queue, whose status
+/// can be represented using HTTP status codes
+pub struct TaskResponse {
+    status: StatusCode,
+    content: Option<Box<dyn ToString>>
+}
 
 
 
