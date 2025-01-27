@@ -1,6 +1,6 @@
 
-use std::{collections::VecDeque, sync::{Arc, Mutex}, thread};
-use crate::{http::{Path, StatusCode}, Method};
+use std::{collections::{HashMap, VecDeque}, net::{TcpListener, TcpStream}, sync::{Arc, Mutex}, thread};
+use crate::http::{Method, Path, Query, Request, StatusCode};
 
 pub struct Server {
     busy_threads: u32,
@@ -8,7 +8,7 @@ pub struct Server {
     thread_pool: Vec<thread::JoinHandle<()>>,
 
     //task_queue,
-    //handlers: HashMap<Path, HeliumTask>
+    handlers: HashMap<(Path, Method), Arc<dyn HeliumTask>>
 }
 
 impl Server {
@@ -22,20 +22,18 @@ impl Server {
         Server {
             busy_threads: 0,
             max_threads,
-            thread_pool
+            thread_pool,
+            handlers: HashMap::new()
         }
     }
 
 
-    fn create_thread_pool(thread_cap: u32, task_queue: Arc<Mutex<VecDeque<Box<dyn HeliumTask<> + Send>>>>) -> Vec<thread::JoinHandle<()>> {
+    fn create_thread_pool(thread_cap: u32, task_queue: Arc<Mutex<VecDeque<TcpStream>>>) -> Vec<thread::JoinHandle<()>> {
     
         let mut thread_pool = Vec::new();
 
-
         for _ in 0..thread_cap {
-    
             let task_mutex = Arc::clone(&task_queue);
-
             thread_pool.push(thread::spawn(move || {
                 /* Thread task handler */
                 loop {
@@ -46,38 +44,42 @@ impl Server {
                     let mut tasks = lock_res.unwrap();
                     
                     // Handle the first task in the queue
-                    let task = match tasks.pop_front() {
+                    let stream = match tasks.pop_front() {
                         None => continue,
-                        Some(t) => t
+                        Some(s) => s
                     };
 
-                    let task_result: TaskResponse = task.execute();
-                    
-                    // Return response over TCP stream
+                    //TODO: 
+                    // - Parse request from TcpStream (obtain path, method, etc.)
+                    // - Lookup corresponding HeliumTask
+                    // - Execute task 
+                    // - Return response over TcpStream
 
                 }
             }));
         }
-        
         thread_pool
     }
 
-    pub fn route<T, F>(&mut self, m: Method, p: T, handler: F) 
-    where 
-        F: HeliumTask,
-        T: ToString
-    {
+    pub fn route<F: HeliumTask + 'static>(&mut self, method: Method, path: Path, handler: F) {
 
-        //TODO:
-        // Register route in a data structure (Hashmap with String keys and `HeliumTask` values)?
-        // When main thread with TCPlistener receives a connection, it looks up the route and adds
-        // the corresponding handler to the task queue
-
-        todo!();
+        self.handlers.insert((path, method), Arc::new(handler));
     }
 
 
-    pub fn run(&mut self) -> std::io::Result<()> {
+    pub fn run(&mut self, socket_addr: &str) -> std::io::Result<()> {
+
+        let listener = TcpListener::bind(socket_addr)?;
+
+        // Accept incoming connections
+        for stream in listener.incoming() {
+            match stream {
+                Err(_) => continue,
+                Ok(s) => {
+                    //TODO: Add stream to task queue
+                }
+            }
+        }   
 
         todo!();
     }
@@ -92,7 +94,9 @@ pub trait HeliumTask {
     fn execute(&self) -> TaskResponse;
 }
 
-// Blanket implementation for *infallible* route handlers
+// Blanket implementation for simple 'static, infallible' route handlers (don't respond 
+// to requests). A use case for a handler like this would be a function that always returns 
+// the HTML for an index page.
 impl<S: ToString + 'static, T: Fn() -> S> HeliumTask for T {
     fn execute(&self) -> TaskResponse {
         let response_content = self();
@@ -103,6 +107,12 @@ impl<S: ToString + 'static, T: Fn() -> S> HeliumTask for T {
         }
     }
 }
+
+//impl<S: ToString + 'static, T: Fn(Query) -> S> HeliumTask for T {
+//    fn execute(&self) -> TaskResponse {
+//        todo!();
+//    }
+//}
 
 
 /// Internal representation of a HeliumTask's completion status

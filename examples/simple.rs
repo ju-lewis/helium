@@ -1,5 +1,5 @@
 
-use helium::{server::Server, Method};
+use helium::{server::Server, http::Method};
 
 
 fn main() -> std::io::Result<()> {
@@ -8,10 +8,10 @@ fn main() -> std::io::Result<()> {
     let mut s = Server::new(8); // 8 threads allowed
 
     // Add routes
-    s.route(Method::GET, "/", || "Index route");
+    s.route(Method::GET, "/".to_string(), || "Index route");
 
     // Run server
-    s.run()
+    s.run("127.0.0.1:8000")
 
 }
 

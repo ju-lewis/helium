@@ -7,9 +7,5 @@ pub mod server;
 pub mod http;
 
 
-pub enum Method {
-    GET,
-    POST
-}
 
 
