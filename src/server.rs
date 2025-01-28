@@ -7,7 +7,7 @@ pub struct Server {
     max_threads: u32,
     thread_pool: Vec<thread::JoinHandle<()>>,
 
-    //task_queue,
+    task_queue: Arc<Mutex<VecDeque<TcpStream>>>,
     handlers: HashMap<(Path, Method), Arc<dyn HeliumTask>>
 }
 
@@ -15,14 +15,15 @@ impl Server {
 
     pub fn new(max_threads: u32) -> Self {
 
-        let task_queue = VecDeque::new();
-        
-        let thread_pool = Self::create_thread_pool(max_threads, Arc::new(Mutex::new(task_queue)));
+        let task_queue = Arc::new(Mutex::new(VecDeque::new()));
+
+        let thread_pool = Self::create_thread_pool(max_threads, Arc::clone(&task_queue));
 
         Server {
             busy_threads: 0,
             max_threads,
             thread_pool,
+            task_queue,
             handlers: HashMap::new()
         }
     }
@@ -76,7 +77,17 @@ impl Server {
             match stream {
                 Err(_) => continue,
                 Ok(s) => {
-                    //TODO: Add stream to task queue
+
+                    // Add TCP stream to task queue for handling by worker threads
+
+                    let lock_res = self.task_queue.lock();
+                    if lock_res.is_err() {
+                        continue;
+                    }
+                    let mut streams = lock_res.unwrap();
+
+                    streams.push_back(s);
+                    
                 }
             }
         }   
