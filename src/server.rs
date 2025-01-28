@@ -1,6 +1,8 @@
 
 use std::{collections::{HashMap, VecDeque}, net::{TcpListener, TcpStream}, sync::{Arc, Mutex}, thread};
-use crate::http::{Method, Path, Query, Request, StatusCode};
+use crate::http::{self, parse_http_request, Method, Path, Query, Request, StatusCode};
+
+use std::io::{Read, Write};
 
 pub struct Server {
     busy_threads: u32,
@@ -45,13 +47,27 @@ impl Server {
                     let mut tasks = lock_res.unwrap();
                     
                     // Handle the first task in the queue
-                    let stream = match tasks.pop_front() {
+                    let mut stream = match tasks.pop_front() {
                         None => continue,
                         Some(s) => s
                     };
 
                     //TODO: 
                     // - Parse request from TcpStream (obtain path, method, etc.)
+                    let mut data = String::new();
+                    let read_res = stream.read_to_string(&mut data);
+                    if read_res.is_err() {
+                        continue;
+                    }
+                    let req = match parse_http_request(&data) {
+                        Ok(r) => r,
+                        Err(_) => {
+                            let response = http::create_response(/* TODO: add error spec to args */);
+                            let _ = stream.write(response.as_bytes());
+                            continue;
+                        }
+                    };
+
                     // - Lookup corresponding HeliumTask
                     // - Execute task 
                     // - Return response over TcpStream
