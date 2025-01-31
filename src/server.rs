@@ -1,6 +1,7 @@
 
 use std::{collections::{HashMap, VecDeque}, net::{TcpListener, TcpStream}, sync::{Arc, Mutex}, thread};
-use crate::http::{self, parse_http_request, Method, Path, Query, Request, StatusCode};
+use crate::http::{self, Method, Path, Query, Request, StatusCode};
+use crate::parsing::parse_http_request;
 
 use std::io::{Read, Write};
 

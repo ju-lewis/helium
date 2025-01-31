@@ -1,4 +1,7 @@
+
+
 use std::{collections::HashMap, error::Error, fmt};
+use crate::parsing;
 
 
 pub trait Response {
@@ -88,31 +91,11 @@ pub enum Request {
     Post(Path, Query, Headers, Body)
 }
 
-#[derive(Debug)]
-pub enum ParseError {
-    //TODO: Complete this list while implementing parser
-}
-
-impl fmt::Display for ParseError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            _ => write!(f, "A parsing error occurred.")
-        }
-    }
-}
-impl Error for ParseError {}
-
-
-/// Parses a UTF-8 String containing an HTTP request from a TCP stream into 
-/// an internal representation `Request` type.
-pub fn parse_http_request(data: &str) -> Result<Request, ParseError> {
-    
-    
-    
-    todo!();
-}
 
 /// Creates a formatted HTTP response
 pub fn create_response() -> String {
     todo!();
 }
+
+
+
