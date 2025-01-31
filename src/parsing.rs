@@ -3,13 +3,14 @@
 
 use std::{error::Error, fmt};
 
-use crate::http::{Method, Request};
+use crate::http::{Body, Headers, Method, Path, Query, Request, Sanitize};
 
 
 #[derive(Debug)]
 pub enum ParseError {
     //TODO: Complete this list while implementing parser
-    InvalidMethod
+    InvalidMethod,
+    MissingPath
 }
 
 impl fmt::Display for ParseError {
@@ -25,8 +26,7 @@ impl Error for ParseError {}
 
 
 /// Parses the method from an HTTP/1.1 request
-pub fn parse_method(r: &str) -> Result<Method, ParseError> {
-    
+fn parse_method(r: &str) -> Result<Method, ParseError> {
 
     let method_str = r.split_once(" ").ok_or(ParseError::InvalidMethod)?.0;
 
@@ -45,6 +45,14 @@ pub fn parse_method(r: &str) -> Result<Method, ParseError> {
 }
 
 
+/// Parses the path from an HTTP/1.1 request
+fn parse_path(r: &str) -> Result<Path, ParseError> {
+    // First, split the request at each whitespace and collect into a vector,
+    // then safely get the path (at index 1) and return the String if it was found.
+    Ok(r.split(" ").collect::<Vec<&str>>().get(1)
+        .ok_or(ParseError::MissingPath)?.to_owned().to_string().sanitize())
+}
+
 
 
 
@@ -53,7 +61,13 @@ pub fn parse_method(r: &str) -> Result<Method, ParseError> {
 pub fn parse_http_request(data: &str) -> Result<Request, ParseError> {
     
     let method = parse_method(data)?;
-    
+    let path = parse_path(data)?;
+    //let version = parse_version(data)?;
+    //let headers = parse_headers(data)?;
+
+    // Logic for determining if the method allows a request body
+    //let body = parse_body(data)?;
+
     
 
     todo!();

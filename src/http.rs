@@ -8,6 +8,11 @@ pub trait Response {
 
 }
 
+pub trait Sanitize {
+    /// Ensure no path-traversal unintended file access occurs
+    fn sanitize(&self) -> Self;
+}
+
 
 pub type Path = String;
 pub type Query = HashMap<String, String>;
@@ -89,6 +94,27 @@ pub enum StatusCode {
 pub enum Request {
     Get(Path, Query, Headers),
     Post(Path, Query, Headers, Body)
+}
+
+
+impl Sanitize for Path {
+    fn sanitize(&self) -> Self {
+
+        // Remove any relative path prefixes (e.g. ../, / ./)
+        let mut i = 0;
+        for c in self.chars() {
+            if !['.', '/'].contains(&c) {
+                return match self.split_at_checked(i) {
+                    None => self,
+                    Some(s) => s.0
+                }.to_string();
+            }
+            i += 1;
+        }
+
+        // This state is only reachable for empty paths (which are impossible to obtain)
+        self.to_string()
+    }
 }
 
 
