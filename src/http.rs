@@ -21,6 +21,7 @@ pub enum Method {
     DELETE,
     CONNECT,
     OPTIONS,
+    PATCH,
     TRACE
 }
 
@@ -105,6 +106,9 @@ impl Error for ParseError {}
 /// Parses a UTF-8 String containing an HTTP request from a TCP stream into 
 /// an internal representation `Request` type.
 pub fn parse_http_request(data: &str) -> Result<Request, ParseError> {
+    
+    
+    
     todo!();
 }
 
