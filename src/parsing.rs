@@ -55,6 +55,19 @@ fn parse_path(r: &str) -> Result<Path, ParseError> {
 
 
 
+fn parse_headers(r: &str) -> Result<Headers, ParseError> {
+    todo!();
+}
+
+fn parse_query(r: &str) -> Result<Query, ParseError> {
+    todo!();
+}
+
+
+fn parse_body(r: &str) -> Result<Body, ParseError> {
+    todo!();
+}
+
 
 /// Parses a UTF-8 String containing an HTTP request from a TCP stream into 
 /// an internal representation `Request` type.
@@ -62,13 +75,18 @@ pub fn parse_http_request(data: &str) -> Result<Request, ParseError> {
     
     let method = parse_method(data)?;
     let path = parse_path(data)?;
+    let query = parse_query(data)?;
     //let version = parse_version(data)?;
-    //let headers = parse_headers(data)?;
+    let headers = parse_headers(data)?;
 
-    // Logic for determining if the method allows a request body
-    //let body = parse_body(data)?;
 
-    
+    let parsed_request = match method {
+        Method::GET => Request::Get(path, query, headers),
+        Method::POST => Request::Post(path, query, headers, parse_body(data)?),
+        //Method::HEAD:: 
+        //TODO: Finish implementing Request type and this match statement
+    };
+
 
     todo!();
 }
