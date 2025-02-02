@@ -1,7 +1,7 @@
 //! HTTP request parsing logic
 
 
-use std::{error::Error, fmt};
+use std::{error::Error, fmt, collections::HashMap};
 
 use crate::http::{Body, Headers, Method, Path, Query, Request, Sanitize};
 
@@ -10,7 +10,9 @@ use crate::http::{Body, Headers, Method, Path, Query, Request, Sanitize};
 pub enum ParseError {
     //TODO: Complete this list while implementing parser
     InvalidMethod,
-    MissingPath
+    MissingPath,
+    MissingQuery,
+    MalformedQuery
 }
 
 impl fmt::Display for ParseError {
@@ -57,15 +59,32 @@ fn parse_path(e: &str) -> Result<Path, ParseError> {
     Ok(e.split_once("?").ok_or(ParseError::MissingPath)?.0.to_string().sanitize())
 }
 
+// Utility function for mapping over query parameters
+fn tuple_str_to_string(t: (&str, &str)) -> (String, String) {
+    (String::from(t.0), String::from(t.1))
+}
+
 
 /// Parses the query string from an endpoint (path and query string)
 fn parse_query(e: &str) -> Result<Query, ParseError> {
-    let query_string = e.split_once("?").ok_or(ParseError::MissingPath)?.1.to_string().sanitize();
+    let query_string = e.split_once("?").ok_or(ParseError::MissingQuery)?.1.to_string();
 
-    
-    
+    let mut params = query_string.split("&").map(|kv| {
+        // kv is a string representation of a key-value pair
 
-    todo!();
+        let (key, value) = kv.split_once("=").ok_or(ParseError::MalformedQuery)?;
+
+        Ok::<(&str, &str), ParseError>((key, value))
+    });
+
+
+    if params.any(|x| x.is_err()) {
+        return Err(ParseError::MalformedQuery);
+    }
+
+
+    // Wow that's a lot of nested brackets lol
+    Ok(HashMap::from_iter(params.map(|x| tuple_str_to_string(x.expect("It has been verified all elements of this iterator are of Ok(x)")))))
 }
 
 fn parse_headers(r: &str) -> Result<Headers, ParseError> {
