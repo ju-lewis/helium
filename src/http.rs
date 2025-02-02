@@ -91,9 +91,24 @@ pub enum StatusCode {
     HttpVersionNotSupported = 505
 }
 
-pub enum Request {
-    Get(Path, Query, Headers),
-    Post(Path, Query, Headers, Body)
+pub struct Request {
+    method: Method,
+    path: Path, 
+    query: Query, 
+    headers: Headers, 
+    body: Option<Body>
+}
+
+impl Request {
+    pub fn from_parts(method: Method, path: Path, query: Query, headers: Headers, body: Option<Body>) -> Self {
+        Request {
+            method,
+            path,
+            query,
+            headers,
+            body
+        }
+    }
 }
 
 

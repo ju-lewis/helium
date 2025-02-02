@@ -64,7 +64,7 @@ fn parse_query(r: &str) -> Result<Query, ParseError> {
 }
 
 
-fn parse_body(r: &str) -> Result<Body, ParseError> {
+fn parse_body(r: &str) -> Result<Option<Body>, ParseError> {
     todo!();
 }
 
@@ -78,14 +78,12 @@ pub fn parse_http_request(data: &str) -> Result<Request, ParseError> {
     let query = parse_query(data)?;
     //let version = parse_version(data)?;
     let headers = parse_headers(data)?;
+    let body = parse_body(data)?;
 
 
-    let parsed_request = match method {
-        Method::GET => Request::Get(path, query, headers),
-        Method::POST => Request::Post(path, query, headers, parse_body(data)?),
-        //Method::HEAD:: 
-        //TODO: Finish implementing Request type and this match statement
-    };
+    let parsed_request = Request::from_parts(method,path,query,headers,body);
+
+
 
 
     todo!();
