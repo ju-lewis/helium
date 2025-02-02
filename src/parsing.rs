@@ -44,25 +44,33 @@ fn parse_method(r: &str) -> Result<Method, ParseError> {
     }
 }
 
-
-/// Parses the path from an HTTP/1.1 request
-fn parse_path(r: &str) -> Result<Path, ParseError> {
+/// Parses the endpoint (path and query string) from an HTTP/1.1 request
+fn parse_endpoint(r: &str) -> Result<String, ParseError> {
     // First, split the request at each whitespace and collect into a vector,
     // then safely get the path (at index 1) and return the String if it was found.
     Ok(r.split(" ").collect::<Vec<&str>>().get(1)
-        .ok_or(ParseError::MissingPath)?.to_owned().to_string().sanitize())
+        .ok_or(ParseError::MissingPath)?.to_owned().to_string())
+}
+
+/// Parses the path from an endpoint (path and query string)
+fn parse_path(e: &str) -> Result<Path, ParseError> {
+    Ok(e.split_once("?").ok_or(ParseError::MissingPath)?.0.to_string().sanitize())
 }
 
 
+/// Parses the query string from an endpoint (path and query string)
+fn parse_query(e: &str) -> Result<Query, ParseError> {
+    let query_string = e.split_once("?").ok_or(ParseError::MissingPath)?.1.to_string().sanitize();
+
+    
+    
+
+    todo!();
+}
 
 fn parse_headers(r: &str) -> Result<Headers, ParseError> {
     todo!();
 }
-
-fn parse_query(r: &str) -> Result<Query, ParseError> {
-    todo!();
-}
-
 
 fn parse_body(r: &str) -> Result<Option<Body>, ParseError> {
     todo!();
@@ -74,19 +82,17 @@ fn parse_body(r: &str) -> Result<Option<Body>, ParseError> {
 pub fn parse_http_request(data: &str) -> Result<Request, ParseError> {
     
     let method = parse_method(data)?;
-    let path = parse_path(data)?;
+    let endpoint = parse_endpoint(data)?;
+    let path = parse_path(&endpoint)?;
+    
     let query = parse_query(data)?;
     //let version = parse_version(data)?;
     let headers = parse_headers(data)?;
     let body = parse_body(data)?;
 
 
-    let parsed_request = Request::from_parts(method,path,query,headers,body);
 
-
-
-
-    todo!();
+    Ok(Request::from_parts(method,path,query,headers,body))
 }
 
 
