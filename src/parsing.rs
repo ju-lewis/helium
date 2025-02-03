@@ -100,8 +100,8 @@ fn parse_headers(r: &str) -> Result<Headers, ParseError> {
         })
         .into_iter()
         .map(|header_str| {
+            // Parsing header strings into key value pairs
             let (key, val) = header_str.split_once(":")?;
-
             Some((key.to_string(), val.to_string()))
         })
         .filter(|maybe_kv| maybe_kv.is_some())
@@ -133,7 +133,6 @@ pub fn parse_http_request(data: &str) -> Result<Request, ParseError> {
     //let version = parse_version(data)?;
     let headers = parse_headers(data)?;
     let body = parse_body(data)?;
-
 
 
     Ok(Request::from_parts(method,path,query,headers,body))
