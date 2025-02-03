@@ -87,8 +87,7 @@ fn parse_query(e: &str) -> Result<Query, ParseError> {
 
 /// Parses all headers from an HTTP message
 fn parse_headers(r: &str) -> Result<Headers, ParseError> {
-    
-    let headers = 
+    Ok(Headers::from_iter(
     r.lines().skip(1) // Skip start line
         .fold(Vec::new(), |mut b, l| {
             if b.last().map_or("", |prev: &String| prev.trim()) != "" {
@@ -104,17 +103,9 @@ fn parse_headers(r: &str) -> Result<Headers, ParseError> {
 
             Some((key.to_string(), val.to_string()))
         })
-        .fold(Vec::new(), |mut b, maybe_kv| {
-            //  Use a fold as a filter and unwrap map
-            match maybe_kv {
-                Some(kv) => b.push(kv),
-                None => ()
-            };
-            b
-        });
-
-
-    todo!();
+        .filter(|maybe_kv| maybe_kv.is_some())
+        .map(|some_kv| some_kv.unwrap())
+    ))
 }
 
 fn parse_body(r: &str) -> Result<Option<Body>, ParseError> {
