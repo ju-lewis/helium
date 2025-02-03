@@ -12,7 +12,8 @@ pub enum ParseError {
     InvalidMethod,
     MissingPath,
     MissingQuery,
-    MalformedQuery
+    MalformedQuery,
+    MissingStartLine
 }
 
 impl fmt::Display for ParseError {
@@ -70,24 +71,49 @@ fn parse_query(e: &str) -> Result<Query, ParseError> {
     let query_string = e.split_once("?").ok_or(ParseError::MissingQuery)?.1.to_string();
 
     let mut params = query_string.split("&").map(|kv| {
+
         // kv is a string representation of a key-value pair
-
         let (key, value) = kv.split_once("=").ok_or(ParseError::MalformedQuery)?;
-
         Ok::<(&str, &str), ParseError>((key, value))
     });
-
 
     if params.any(|x| x.is_err()) {
         return Err(ParseError::MalformedQuery);
     }
 
-
     // Wow that's a lot of nested brackets lol
     Ok(HashMap::from_iter(params.map(|x| tuple_str_to_string(x.expect("It has been verified all elements of this iterator are of Ok(x)")))))
 }
 
+/// Parses all headers from an HTTP message
 fn parse_headers(r: &str) -> Result<Headers, ParseError> {
+    
+    let headers = 
+    r.lines().skip(1) // Skip start line
+        .fold(Vec::new(), |mut b, l| {
+            if b.last().map_or("", |prev: &String| prev.trim()) != "" {
+                // If the last line checked was non-empty, add current line and continue parsing
+                // (This prevents the iterator from gaining any lines after the message metadata)
+                b.push(l.to_string()); 
+            }
+            b
+        })
+        .into_iter()
+        .map(|header_str| {
+            let (key, val) = header_str.split_once(":")?;
+
+            Some((key.to_string(), val.to_string()))
+        })
+        .fold(Vec::new(), |mut b, maybe_kv| {
+            //  Use a fold as a filter and unwrap map
+            match maybe_kv {
+                Some(kv) => b.push(kv),
+                None => ()
+            };
+            b
+        });
+
+
     todo!();
 }
 
