@@ -13,7 +13,8 @@ pub enum ParseError {
     MissingPath,
     MissingQuery,
     MalformedQuery,
-    MissingStartLine
+    MissingStartLine,
+    MissingBody,
 }
 
 impl fmt::Display for ParseError {
@@ -108,8 +109,15 @@ fn parse_headers(r: &str) -> Result<Headers, ParseError> {
     ))
 }
 
+/// Optionally parses a message body from an HTTP message
 fn parse_body(r: &str) -> Result<Option<Body>, ParseError> {
-    todo!();
+    let b = r.split_once("\r\n\r\n").ok_or(ParseError::MissingBody)?.1;
+    if b == "" {
+        // No body
+        return Ok(None)
+    }
+
+    Ok(Some(b.to_string()))
 }
 
 
