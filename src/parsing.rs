@@ -58,7 +58,12 @@ fn parse_endpoint(r: &str) -> Result<String, ParseError> {
 
 /// Parses the path from an endpoint (path and query string)
 fn parse_path(e: &str) -> Result<Path, ParseError> {
-    Ok(e.split_once("?").ok_or(ParseError::MissingPath)?.0.to_string().sanitize())
+    Ok(
+        match e.split_once("?") {
+            None => e,
+            Some((p,_)) => p
+        }.to_string().sanitize()
+    )
 }
 
 // Utility function for mapping over query parameters
@@ -126,8 +131,11 @@ fn parse_body(r: &str) -> Result<Option<Body>, ParseError> {
 pub fn parse_http_request(data: &str) -> Result<Request, ParseError> {
     
     let method = parse_method(data)?;
+    eprintln!("Parsed method!: {:?}", method);
     let endpoint = parse_endpoint(data)?;
+    eprintln!("Parsed endpoint!: {:?}", endpoint);
     let path = parse_path(&endpoint)?;
+    eprintln!("Parsed path!: {:?}", path);
     
     let query = parse_query(data)?;
     //let version = parse_version(data)?;

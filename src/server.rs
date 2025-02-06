@@ -53,8 +53,7 @@ impl Server {
                         Some(s) => s
                     };
 
-                    //TODO: 
-                    // - Parse request from TcpStream (obtain path, method, etc.)
+
                     let mut data = String::new();
                     let read_res = stream.read_to_string(&mut data);
                     if read_res.is_err() {
@@ -62,17 +61,23 @@ impl Server {
                     }
                     let req = match parse_http_request(&data) {
                         Ok(r) => r,
-                        Err(_) => {
+                        Err(e) => {
+
+                            println!("There was an error parsing the request: {:?}", e);
+
                             let response = http::create_response(/* TODO: add error spec to args */);
                             let _ = stream.write(response.as_bytes());
                             continue;
                         }
                     };
 
+
+                    println!("Received request: {:#?}", req);
+
                     // - Lookup corresponding HeliumTask
                     // - Execute task 
                     // - Return response over TcpStream
-
+                    
                 }
             }));
         }

@@ -20,7 +20,7 @@ pub type Headers = HashMap<String, String>;
 pub type Body = String;
 
 
-#[derive(Eq, Hash, PartialEq)]
+#[derive(Eq, Hash, PartialEq, Debug)]
 pub enum Method {
     GET,
     HEAD,
@@ -91,6 +91,7 @@ pub enum StatusCode {
     HttpVersionNotSupported = 505
 }
 
+#[derive(Debug)]
 pub struct Request {
     method: Method,
     path: Path, 
@@ -121,7 +122,7 @@ impl Sanitize for Path {
             if !['.', '/'].contains(&c) {
                 return match self.split_at_checked(i) {
                     None => self,
-                    Some(s) => s.0
+                    Some(s) => s.1
                 }.to_string();
             }
             i += 1;
