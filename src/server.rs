@@ -11,7 +11,7 @@ pub struct Server {
     thread_pool: Vec<thread::JoinHandle<()>>,
 
     task_queue: Arc<Mutex<VecDeque<TcpStream>>>,
-    handlers: HashMap<(Path, Method), Arc<dyn HeliumTask>>
+    handlers: Arc<HashMap<(Path, Method), Arc<dyn HeliumTask + Sync + Send>>>
 }
 
 impl Server {
@@ -20,25 +20,29 @@ impl Server {
 
         let task_queue = Arc::new(Mutex::new(VecDeque::new()));
 
-        let thread_pool = Self::create_thread_pool(max_threads, Arc::clone(&task_queue));
-
-        Server {
+        let mut server = Server {
             busy_threads: 0,
             max_threads,
-            thread_pool,
+            thread_pool: Vec::new(),
             task_queue,
-            handlers: HashMap::new()
-        }
+            handlers: Arc::new(HashMap::new())
+        };
+
+        server.create_thread_pool(max_threads);
+
+        server
     }
 
-
-    fn create_thread_pool(thread_cap: u32, task_queue: Arc<Mutex<VecDeque<TcpStream>>>) -> Vec<thread::JoinHandle<()>> {
-    
-        let mut thread_pool = Vec::new();
+    ///
+    /// Initialises a Helium `Server` object's thread pool
+    ///
+    fn create_thread_pool(&mut self, thread_cap: u32) {
 
         for _ in 0..thread_cap {
-            let task_mutex = Arc::clone(&task_queue);
-            thread_pool.push(thread::spawn(move || {
+            let task_mutex = Arc::clone(&self.task_queue);
+            let map = Arc::clone(&self.handlers);
+
+            self.thread_pool.push(thread::spawn(move || {
                 /* Thread task handler */
                 loop {
                     let lock_res = task_mutex.lock();
@@ -71,22 +75,43 @@ impl Server {
                         }
                     };
 
-
                     println!("Received request: {:#?}", req);
 
                     // - Lookup corresponding HeliumTask
+                    let task = match map.get(&(req.path, req.method)) {
+                        None => {
+                            // Return 404
+                            println!("404");
+                            let res = stream.write("test".as_bytes());
+                            if res.is_err() {
+                                println!("There was an error writing to the stream: {:?}", res.unwrap_err());
+                            }
+                            continue
+                        },
+                        Some(t) => t
+                    };
                     // - Execute task 
+                    let response = task.execute();
+
                     // - Return response over TcpStream
+                    let status = response.status;
+                    let content = match response.content {
+                        Some(c) => c.to_string(),
+                        None => String::new()
+                    };
+
+                    // Format HTTP response
                     
                 }
             }));
         }
-        thread_pool
     }
 
-    pub fn route<F: HeliumTask + 'static>(&mut self, method: Method, path: Path, handler: F) {
+    pub fn route<F: HeliumTask + 'static + Send + Sync>(&mut self, method: Method, path: Path, handler: F) {
 
-        self.handlers.insert((path, method), Arc::new(handler));
+        let temp_handlers = Arc::make_mut(&mut self.handlers);
+
+        temp_handlers.insert((path, method), Arc::new(handler));
     }
 
 

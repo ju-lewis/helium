@@ -20,7 +20,7 @@ pub type Headers = HashMap<String, String>;
 pub type Body = String;
 
 
-#[derive(Eq, Hash, PartialEq, Debug)]
+#[derive(Eq, Hash, PartialEq, Debug, Clone)]
 pub enum Method {
     GET,
     HEAD,
@@ -91,13 +91,13 @@ pub enum StatusCode {
     HttpVersionNotSupported = 505
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Request {
-    method: Method,
-    path: Path, 
-    query: Query, 
-    headers: Headers, 
-    body: Option<Body>
+    pub method: Method,
+    pub path: Path, 
+    pub query: Query, 
+    pub headers: Headers, 
+    pub body: Option<Body>
 }
 
 impl Request {
