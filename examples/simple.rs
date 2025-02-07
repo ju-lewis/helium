@@ -4,6 +4,7 @@ use helium::{server::Server, http::Method};
 
 fn main() -> std::io::Result<()> {
 
+
     // Create server
     let mut s = Server::new(8); // 8 threads allowed
 

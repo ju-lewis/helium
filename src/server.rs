@@ -1,5 +1,5 @@
 
-use std::{collections::{HashMap, VecDeque}, net::{TcpListener, TcpStream}, sync::{Arc, Mutex}, thread};
+use std::{any::Any, collections::{HashMap, VecDeque}, net::{TcpListener, TcpStream}, sync::{Arc, Mutex}, thread};
 use crate::http::{self, Method, Path, Query, Request, StatusCode};
 use crate::parsing::parse_http_request;
 
@@ -80,27 +80,34 @@ impl Server {
                     // - Lookup corresponding HeliumTask
                     let task = match map.get(&(req.path, req.method)) {
                         None => {
-                            // Return 404
-                            println!("404");
-                            let res = stream.write("test".as_bytes());
-                            if res.is_err() {
-                                println!("There was an error writing to the stream: {:?}", res.unwrap_err());
-                            }
-                            continue
+
+                            // TEMP TEST RESPONSE
+                            let response_content = "HTTP/1.1 200 OK\r\nContent-Length: 4\r\nConnection: close\r\nContent-Type: text/plain\r\n\r\nTest";
+                            eprintln!("Response:\n\n{}\n\n",response_content);
+                            let res = stream.write_all(response_content.as_bytes());
+                            stream.flush().expect("test");
+                            eprintln!("Write result: {:?}", res);
+
+
+                            continue;
                         },
                         Some(t) => t
                     };
                     // - Execute task 
                     let response = task.execute();
 
-                    // - Return response over TcpStream
+
+                    // Return response over TcpStream
                     let status = response.status;
                     let content = match response.content {
                         Some(c) => c.to_string(),
                         None => String::new()
                     };
-
+                        
                     // Format HTTP response
+                    let r = stream.write_all("Hello!".as_bytes());
+                    stream.flush().expect("Error flushing stream");
+                    eprintln!("Write result: {:?}", r);
                     
                 }
             }));
@@ -117,7 +124,9 @@ impl Server {
 
     pub fn run(&mut self, socket_addr: &str) -> std::io::Result<()> {
 
+
         let listener = TcpListener::bind(socket_addr)?;
+        
 
         // Accept incoming connections
         for stream in listener.incoming() {
@@ -134,7 +143,6 @@ impl Server {
                     let mut streams = lock_res.unwrap();
 
                     streams.push_back(s);
-                    
                 }
             }
         }   
