@@ -131,11 +131,8 @@ fn parse_body(r: &str) -> Result<Option<Body>, ParseError> {
 pub fn parse_http_request(data: &str) -> Result<Request, ParseError> {
     
     let method = parse_method(data)?;
-    eprintln!("Parsed method!: {:?}", method);
     let endpoint = parse_endpoint(data)?;
-    eprintln!("Parsed endpoint!: {:?}", endpoint);
     let path = parse_path(&endpoint)?;
-    eprintln!("Parsed path!: {:?}", path);
     
     let query = parse_query(data)?;
     //let version = parse_version(data)?;

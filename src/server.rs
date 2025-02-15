@@ -81,8 +81,8 @@ impl Server {
                     let req = match parse_http_request(&request_string) {
                         Ok(r) => r,
                         Err(e) => {
-                            let response = http::create_response(/* TODO: add error spec to args */);
-                            tx.send((stream_key, response));
+                            //let response = http::create_response(/* TODO: add error spec to args */);
+                            let _ = tx.send((stream_key, "HTTP/1.1 400 Bad Request\r\n\r\n".to_string()));
                             continue;
                         }
                     };
@@ -91,7 +91,7 @@ impl Server {
                     let task = match map.get(&(req.path, req.method)) {
                         None => {
                             // Send 404 response
-                            tx.send((stream_key, "404 test".to_string()));
+                            let _ = tx.send((stream_key, "HTTP/1.1 404 Not Found\r\n\r\n".to_string()));
                             continue;
                         },
                         Some(t) => t
@@ -108,7 +108,7 @@ impl Server {
                     };
                         
                     // Format HTTP response
-                    tx.send((stream_key, "Test success!".to_string()));
+                    let _ = tx.send((stream_key, "HTTP/1.1 200 OK\r\n\r\nTest success!".to_string()));
                     
                 }
             }));
@@ -137,7 +137,6 @@ impl Server {
             match stream {
                 Err(_) => continue,
                 Ok(mut s) => {
-                    eprintln!("Received: {:?}", s);
                     // Add TCP stream to task queue for handling by worker threads
 
                     let lock_res = self.task_queue.lock();
@@ -146,8 +145,10 @@ impl Server {
                     }
                     let mut tasks = lock_res.unwrap();
 
-                    let mut request_bytes: Vec<u8> = Vec::new();
+                    //let mut request_bytes: Vec<u8> = Vec::with_capacity(1024);
+                    let mut request_bytes: [u8; 1024] = [0; 1024];
                     let read_res = s.0.read(&mut request_bytes);
+
 
                     if read_res.is_err() {
                         eprintln!("[ERROR]    Couldn't read content from TCPStream.");
@@ -160,7 +161,7 @@ impl Server {
                     // Log stream in hashmap
                     self.streams.insert(stream_key, s.0);
                     // Pass content and stream key to worker threads
-                    let request_string = match String::from_utf8(request_bytes) {
+                    let request_string = match String::from_utf8(request_bytes.to_vec()) {
                         Ok(s) => s,
                         Err(_) => continue
                     };
@@ -170,19 +171,23 @@ impl Server {
 
             // Now try to receive any messages from the communication channels
             match &self.channel_rx {
-                None => continue,
+                None => {
+                    continue;
+                },
                 Some(rx) => {
                     // Non-blocking receive attempt
-                    let maybe_data = rx.try_recv();
+                    let maybe_data = rx.recv();
                     if maybe_data.is_err() {
                         continue;
                     }
-                    
                     let data = maybe_data.expect("Channel data errored unexpectedly.");
+
+                    eprintln!("Sending: {} over TCP stream", data.1);
                     
                     let maybe_stream = self.streams.remove(&data.0);
                     if let Some(mut outgoing_stream) = maybe_stream {
-                        let write_res = outgoing_stream.write(data.1.as_bytes());
+
+                        let write_res = outgoing_stream.write_all(data.1.as_bytes());
 
                         if write_res.is_err() {
                             eprintln!("Failed to write data over socket.");
@@ -190,7 +195,7 @@ impl Server {
                         }
                         
                         // Now close the stream
-                        let _ = outgoing_stream.shutdown(std::net::Shutdown::Both);
+                        //let _ = outgoing_stream.shutdown(std::net::Shutdown::Both);
                     }
 
                 }
